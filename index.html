@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Fluxo de CRM - Visualização Interativa | Drogaria Ultra Popular Goiás</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand:#0e2a47;
+    --font:'Inter','Segoe UI',system-ui,-apple-system,Arial,sans-serif;
+    --font-display:'Sora','Inter','Segoe UI',sans-serif;
+    --green:#0e8a60; --green-2:#0aa870;
+    --line:#e3e9f2; --muted:#64748b; --ink:#1f2937;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:var(--font);color:var(--ink);display:flex;flex-direction:column;overflow:hidden;background:#eef2f7}
+
+  /* ===== HEADER ===== */
+  header{display:flex;align-items:center;gap:18px;padding:10px 20px;background:linear-gradient(90deg,#ffffff,#f5f8fc);
+    border-bottom:1px solid var(--line);z-index:20;flex:0 0 auto;box-shadow:0 2px 10px rgba(14,42,71,.06)}
+  body.zen header{display:none}
+  .brand-logo{display:flex;align-items:center;gap:10px;color:var(--brand)}
+  .logo-icon{width:46px;height:46px;flex:0 0 auto}
+  .logo-text{display:flex;flex-direction:column;line-height:1}
+  .lt-top{align-self:flex-end;font-weight:700;letter-spacing:.32em;font-size:11px}
+  .lt-main{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:.01em}
+  .lt-sub{align-self:flex-start;font-weight:600;letter-spacing:.28em;font-size:10px;margin-top:3px}
+  .htxt h1{font-family:var(--font-display);font-size:15px;line-height:1.2;font-weight:700;color:var(--brand)}
+  .htxt p{font-size:12px;color:var(--muted)}
+  .hactions{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .badge-roval{background:#fff7d6;border:1px solid #f0dc82;color:#7a5b00;padding:7px 12px;border-radius:999px;font-weight:700;font-size:12px;white-space:nowrap}
+  .hbtn{padding:9px 14px;border-radius:10px;border:1px solid #d7dce4;background:#fff;font-family:var(--font);font-weight:600;font-size:13px;
+    cursor:pointer;display:flex;gap:7px;align-items:center;box-shadow:0 1px 2px rgba(16,24,40,.06);transition:.15s;color:#334155}
+  .hbtn:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(16,24,40,.12)}
+  .hbtn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .hbtn.green{background:var(--green);color:#fff;border-color:var(--green)}
+  .hbtn.cloud{background:#0b6cf4;color:#fff;border-color:#0b6cf4}
+
+  /* ===== CANVAS ===== */
+  #viewport{flex:1;position:relative;overflow:hidden;touch-action:none;cursor:grab}
+  #viewport.panning{cursor:grabbing}
+  #world{position:absolute;top:0;left:0;width:3200px;height:1700px;transform-origin:0 0;background-color:#f7f9fc;
+    background-image:radial-gradient(#dde4ee 1.1px,transparent 1.1px);background-size:24px 24px}
+  #edges{position:absolute;top:0;left:0;pointer-events:none}
+  #edges path{fill:none;stroke:#a9b8c9;stroke-width:1.6}
+  #edges path.hl{stroke:#0b6cf4;stroke-width:2.4}
+
+  /* ===== NODES ===== */
+  .node{position:absolute;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 6px rgba(16,24,40,.08);
+    padding:11px 13px;font-size:12.5px;cursor:grab;user-select:none;touch-action:none;transition:box-shadow .15s}
+  .node:hover{box-shadow:0 8px 20px rgba(16,24,40,.14)}
+  .node:active{cursor:grabbing}
+  .node.selected{outline:2px solid #0b6cf4;outline-offset:2px}
+  .node.process{text-align:center;color:#374151;padding:13px;font-weight:500}
+  .node.start{border:1.5px solid #7b8794;text-align:center;font-weight:600;line-height:1.5}
+  .node.funnel{background:linear-gradient(135deg,var(--green),var(--green-2));border:none;color:#fff;font-family:var(--font-display);
+    font-weight:700;text-align:center;letter-spacing:.5px;padding:17px 12px;font-size:13px;text-transform:uppercase;border-radius:10px;
+    box-shadow:0 8px 18px rgba(14,138,96,.28)}
+  .node.auto{background:linear-gradient(135deg,#101828,#233044);border:none;color:#fff;font-weight:700;text-align:center;font-size:10.5px;
+    letter-spacing:.8px;padding:9px 8px;border-radius:7px}
+  .node.message{background:linear-gradient(180deg,#f0fbf5,#e6f7ee);border:1px solid #c4e8d4;border-left:4px solid #2fbf71;color:#1c4532;
+    text-align:left;font-size:11.8px;line-height:1.55;border-radius:10px}
+  .node.message strong{display:block;font-size:12.3px;color:#0f5132;margin-bottom:4px;font-weight:700}
+  .node.message em{display:block;color:#3a7a5c;font-style:normal;font-size:10.5px;margin-bottom:6px;font-weight:600}
+  .node.message p{margin-bottom:5px}
+  .node.note{background:#f6f8fa;border:1px solid #e2e5ea;color:#6b7280;font-size:10.5px;letter-spacing:.3px;text-transform:uppercase;line-height:1.6}
+  .node.annot{background:#fdeeee;border:1px solid #f3c7c7;border-left:4px solid #e05252;color:#b42323;font-size:11.8px;font-weight:500}
+  .node.annot.upper{text-transform:uppercase;font-weight:700;font-size:11px}
+  .read{color:#199f68;font-size:10.5px;font-weight:700;display:inline-block;margin-top:6px;cursor:pointer}
+  .node.note .read{color:#8a94a3}
+
+  /* ===== CONTROLES FLUTUANTES ===== */
+  .zoomctl{position:absolute;left:14px;bottom:14px;display:flex;flex-direction:column;gap:8px;z-index:15}
+  body.zen .helpchip,body.zen .legend,body.zen #details{display:none!important}
+  .zoomctl button{width:40px;height:40px;background:#fff;border:1px solid #d7dce4;border-radius:11px;font-size:17px;cursor:pointer;
+    box-shadow:0 2px 8px rgba(16,24,40,.12);transition:.15s}
+  .zoomctl button:hover{background:#f4f7fb;transform:translateY(-1px)}
+  #zoomLabel{background:#fff;border:1px solid #d7dce4;border-radius:9px;padding:4px 0;font-size:11px;text-align:center;color:#475569;font-weight:600}
+  .helpchip{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.95);border:1px solid var(--line);
+    border-radius:999px;padding:8px 18px;font-size:12px;color:#475569;z-index:15;box-shadow:0 3px 10px rgba(16,24,40,.10);white-space:nowrap;backdrop-filter:blur(4px)}
+  .legend{position:absolute;right:14px;bottom:14px;background:#fff;border:1px solid #d7dce4;border-radius:13px;padding:11px 15px;font-size:11px;
+    z-index:15;display:grid;gap:6px;box-shadow:0 3px 10px rgba(16,24,40,.10)}
+  .legend b{font-size:11px;display:block;margin-bottom:2px}
+  .legend div{display:flex;align-items:center;gap:8px;color:#475569}
+  .chip{width:12px;height:12px;border-radius:4px;display:inline-block;flex:0 0 auto}
+
+  /* ===== PAINEL DETALHES / EDIÇÃO ===== */
+  #details{position:fixed;top:80px;right:16px;width:400px;max-height:calc(100vh - 116px);overflow:auto;background:#fff;border:1px solid var(--line);
+    border-radius:16px;box-shadow:0 16px 40px rgba(16,24,40,.20);padding:20px;z-index:30;transform:translateX(120%);transition:transform .25s ease}
+  #details.open{transform:none}
+  #details h2{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;font-weight:700}
+  #details .dbadge{display:inline-block;padding:4px 11px;border-radius:999px;font-size:11px;font-weight:700;margin-bottom:10px}
+  #details h3{font-family:var(--font-display);font-size:17px;margin-bottom:8px;line-height:1.3;color:var(--brand)}
+  #details .trig{background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:9px;padding:8px 10px;font-size:12px;color:#475569;margin-bottom:10px}
+  #details p{font-size:13px;line-height:1.6;margin-bottom:10px;color:#334155;white-space:pre-line}
+  #dclose{position:absolute;top:12px;right:12px;border:none;background:#f1f5f9;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:15px;color:#475569}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+  .field input,.field textarea{width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:9px 10px;font-family:var(--font);font-size:13px;color:var(--ink);background:#fbfdff}
+  .field textarea{min-height:150px;resize:vertical;line-height:1.5}
+  .field input:focus,.field textarea:focus{outline:2px solid #bcd7ff;border-color:#0b6cf4}
+  .edit-actions{display:flex;gap:8px;margin-top:6px}
+  .hint{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5}
+
+  /* ===== TOAST ===== */
+  #toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:var(--brand);color:#fff;padding:11px 20px;border-radius:999px;
+    font-size:13px;font-weight:600;box-shadow:0 10px 26px rgba(14,42,71,.35);opacity:0;pointer-events:none;transition:.3s;z-index:60}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  /* ===== CABEÇALHO SÓ DE IMPRESSÃO ===== */
+  .print-head{display:none;align-items:center;gap:14px;padding:8mm 10mm 4mm;color:var(--brand)}
+  .print-head .logo-icon{width:34px;height:34px}
+  .print-head .lt-main{font-size:22px}
+  .print-head .lt-top{font-size:8px}
+  .print-head .lt-sub{font-size:7px}
+  .print-head h1{font-family:var(--font-display);font-size:16px}
+  .print-head p{font-size:11px;color:var(--muted)}
+
+  /* ===== IMPRESSÃO / PDF VETORIAL ===== */
+  @media print{
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    @page{size:860mm 480mm;margin:0}
+    html,body{height:auto;overflow:visible;background:#fff}
+    header,.zoomctl,.helpchip,.legend,#details,#toast{display:none!important}
+    .print-head{display:flex!important}
+    #viewport{overflow:visible;height:auto;flex:none}
+    #world{transform:none!important;position:relative;background-image:none;background:#fff}
+    .node{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-logo">
+    <svg class="logo-icon" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="11"/>
+      <circle cx="50" cy="50" r="24" fill="none" stroke="currentColor" stroke-width="17" stroke-dasharray="31.7 6" stroke-dashoffset="34.7"/>
+    </svg>
+    <div class="logo-text">
+      <span class="lt-top">GRUPO</span>
+      <span class="lt-main">ÚNICO</span>
+      <span class="lt-sub">CONTATO</span>
+    </div>
+  </div>
+  <div class="htxt">
+    <h1>Fluxo de CRM - Visualização Interativa</h1>
+    <p>Mapeamento de Processos e Automação</p>
+  </div>
+  <div class="hactions">
+    <span class="badge-roval">Drogaria Ultra Popular Goiás</span>
+    <button class="hbtn green" id="btnSaveHtml" title="Baixa uma cópia deste HTML com mensagens e posições embutidas">💾 Salvar HTML</button>
+    <button class="hbtn cloud" id="btnCloud" title="Publica a versão atual no GitHub (configure GITHUB_CONFIG no código)">☁️ Publicar no GitHub</button>
+    <button class="hbtn primary" id="btnPdf" title="Gera PDF vetorial em alta resolução">📄 Exportar PDF</button>
+    <button class="hbtn" id="btnReset" title="Descarta edições salvas neste navegador">↺ Restaurar</button>
+  </div>
+</header>
+
+<div class="print-head">
+  <svg class="logo-icon" viewBox="0 0 100 100" aria-hidden="true">
+    <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="11"/>
+    <circle cx="50" cy="50" r="24" fill="none" stroke="currentColor" stroke-width="17" stroke-dasharray="31.7 6" stroke-dashoffset="34.7"/>
+  </svg>
+  <div class="logo-text">
+    <span class="lt-top">GRUPO</span>
+    <span class="lt-main">ÚNICO</span>
+    <span class="lt-sub">CONTATO</span>
+  </div>
+  <div>
+    <h1>Fluxo de CRM — Drogaria Ultra Popular Goiás</h1>
+    <p>Mapeamento de processos e automação — orçamento, separação, entrega e pós-venda</p>
+  </div>
+</div>
+
+<div id="viewport">
+  <div id="world">
+    <svg id="edges" width="3200" height="1700">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0L10,5L0,10z" fill="#a9b8c9"></path>
+        </marker>
+        <marker id="arrowHl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0L10,5L0,10z" fill="#0b6cf4"></path>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="helpchip ui-overlay">🖱️ Arraste o fundo = mover &nbsp;•&nbsp; Scroll = zoom &nbsp;•&nbsp; Arraste cards = organizar &nbsp;•&nbsp; Clique = detalhes/editar &nbsp;•&nbsp; 2 cliques = centralizar &nbsp;•&nbsp; 👁 = modo foco</div>
+
+  <div class="zoomctl ui-overlay">
+    <button id="btnZen" title="Modo foco: esconde menus para ver o fluxo completo">👁</button>
+    <button id="zin" title="Zoom +">+</button>
+    <button id="zout" title="Zoom −">−</button>
+    <button id="zfit" title="Enquadrar fluxo">⛶</button>
+    <div id="zoomLabel">100%</div>
+  </div>
+
+  <div class="legend ui-overlay">
+    <b>Legenda</b>
+    <div><span class="chip" style="background:linear-gradient(135deg,#0e8a60,#0aa870)"></span> Funil</div>
+    <div><span class="chip" style="background:#101828"></span> Automação do sistema</div>
+    <div><span class="chip" style="background:#e6f7ee;border:1px solid #2fbf71"></span> Mensagem automática (editável)</div>
+    <div><span class="chip" style="background:#fff;border:1px solid #dfe5ec"></span> Etapa / decisão</div>
+    <div><span class="chip" style="background:#fdeeee;border:1px solid #e05252"></span> Ação / observação</div>
+    <div><span class="chip" style="background:#f6f8fa;border:1px solid #e2e5ea"></span> Nota de configuração</div>
+  </div>
+</div>
+
+<div id="details">
+  <button id="dclose" title="Fechar">✕</button>
+  <h2>Detalhes do Elemento</h2>
+  <div id="dbody"></div>
+</div>
+
+<div id="toast"></div>
+
+<script type="application/json" id="saved-edits">{}</script>
+
+<script>
+/* =====================================================================
+   CONFIGURAÇÃO DO SALVAMENTO ONLINE (GITHUB) — OPCIONAL
+   1. Crie um repositório e publique este arquivo (ex.: index.html) no GitHub Pages.
+   2. Gere um Personal Access Token (scope "repo" ou fine-grained com "Contents: Read and write")
+      limitado APENAS a esse repositório.
+   3. Preencha abaixo. Com isso, o botão "☁️ Publicar no GitHub" passa a commitar
+      este arquivo atualizado (mensagens + posições dos cards) no repositório,
+      e qualquer pessoa que acessar o site verá a versão mais recente.
+   ATENÇÃO: o token fica visível no código público. Use um token restrito a este repositório.
+   ===================================================================== */
+const GITHUB_CONFIG = {
+  repo: '',          // ex.: 'seu-usuario/fluxo-ultra-popular'
+  path: 'index.html',// caminho do arquivo no repositório
+  branch: 'main',
+  token: ''          // ex.: 'ghp_...'
+};
+
+/* ================= CAPTURA DO TEMPLATE LIMPO ================= */
+const PRISTINE = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+const KEY = 'unicoUltraPopularEdits_v1';
+
+/* ================= DADOS DO FLUXO (DROGARIA) ================= */
+const NODES = [
+ {id:'duvidas', type:'start', x:30, y:70, w:150, text:'Dúvidas<br>Segue no atendimento normal com o atendente'},
+ {id:'att', type:'process', x:250, y:80, w:180, text:'Atendimento WhatsApp'},
+ {id:'sol', type:'process', x:470, y:80, w:170, text:'Solicitou Orçamento'},
+ {id:'cad', type:'process', x:680, y:80, w:170, text:'Cadastro CRM'},
+ {id:'funilV', type:'funnel', x:930, y:64, w:210, text:'FUNIL VENDAS DROGARIA'},
+ {id:'orcEnv', type:'process', x:955, y:190, w:160, text:'Orçamento enviado'},
+
+ {id:'neg', type:'process', x:700, y:330, w:170, text:'Não respondeu'},
+ {id:'autoNeg', type:'auto', x:700, y:410, w:170, text:'AUTOMAÇÃO DO SISTEMA'},
+ {id:'msgNeg1', type:'message', x:675, y:480, w:220, title:'1 - Mensagem enviada após o envio do orçamento', trigger:'{Enviar 1h após o envio do orçamento}',
+   paras:['[Nome], entendo a sua preocupação! 💚 Podemos conversar e ver se há possibilidade de ajustes sem comprometer a qualidade?','Nosso foco é o seu bem-estar, estamos aqui para ajudar! ✨🙌']},
+ {id:'negNR1', type:'process', x:700, y:760, w:170, text:'Não Respondeu'},
+ {id:'msgNeg2', type:'message', x:675, y:830, w:220, title:'Dispara 2 - Segunda tentativa caso o cliente não responda', trigger:'{Enviar 24 horas após a primeira mensagem, caso não tenha resposta}',
+   paras:['Olá, [Nome], tudo certo por aí? 💬 Para te ajudar a comparar direitinho: além do melhor preço, aqui você tem atendimento de perto, rastreabilidade e cuidado em cada etapa do seu pedido.','O que precisa nesse momento para realizar a aprovação do seu pedido?']},
+ {id:'negNR2', type:'process', x:700, y:1100, w:170, text:'Não Respondeu'},
+ {id:'pesquisa', type:'message', x:660, y:1170, w:250, title:'AUTOMAÇÃO DE BOTÕES COM PESQUISA', trigger:'{Disparo automático após 48h sem resposta → dar perda}',
+   paras:['OLÁ, NOTAMOS QUE VOCÊ DEMONSTROU INTERESSE EM NOSSOS PRODUTOS/SERVIÇO MAS NÃO FINALIZOU SUA COMPRA. PODERIA NOS AJUDAR RESPONDENDO RAPIDAMENTE O MOTIVO?','- PREÇO','- PRAZO DE ENTREGA','- ENCONTREI EM OUTRO LUGAR','OBS: APÓS A SELEÇÃO DO CLIENTE, COLOCAR UMA ETIQUETA FIXA DE ATENDIMENTO PARA QUE O GESTOR CONSIGA PUXAR NO RELATÓRIO.']},
+ {id:'perda48', type:'annot', x:1000, y:1080, w:170, text:'Dar perda após 48h'},
+
+ {id:'apr', type:'process', x:1270, y:330, w:170, text:'Aprovado (Ganho)'},
+ {id:'ganho', type:'annot', x:1270, y:420, w:170, text:'Dar ganho colocando o valor do pedido'},
+ {id:'manip', type:'process', x:1480, y:330, w:170, text:'Pedido em separação'},
+ {id:'enviado', type:'process', x:1690, y:330, w:170, text:'Enviado / Entregue'},
+ {id:'dup', type:'annot upper', x:1900, y:330, w:190, text:'DUPLICA PARA O FUNIL PÓS-VENDA'},
+ {id:'nota', type:'note', x:1900, y:170, w:220, text:'VINCULAR UM CAMPO DO CRM PARA A DUPLICAÇÃO DO LEAD EM CADA FUNIL: 1 MÊS / 2 MESES / 3 MESES',
+   full:'VINCULAR UM CAMPO DO CRM PARA A DUPLICAÇÃO DO LEAD EM CADA FUNIL:\n1 MÊS\n2 MESES\n3 MESES\n\nAssim, o mesmo cliente que compra para 2 ou 3 meses de tratamento entra automaticamente no funil de pós-venda correto.'},
+
+ {id:'funilP', type:'funnel', x:2400, y:240, w:210, text:'FUNIL PÓS VENDA'},
+ {id:'note2', type:'note', x:2160, y:110, w:260, text:'PERSONALIZAÇÃO ULTRA POPULAR: 1ª MENSAGEM DE PÓS-VENDA EM 3 DIAS APÓS ENVIO/ENTREGA, CONFIRMANDO RECEBIMENTO DO PEDIDO. DEMAIS TEMPOS CONFIGURÁVEIS.',
+   full:'PERSONALIZAÇÃO ULTRA POPULAR:\n1ª mensagem de pós-venda em 3 dias após envio/entrega, confirmando se o pedido chegou certo e no prazo.\nDemais tempos (recompra e reforço) configuráveis conforme a duração de cada tratamento.'},
+
+ {id:'p1', type:'process', x:2160, y:330, w:200, text:'Produto Uso Contínuo<br>Comprou para 1 mês'},
+ {id:'p2', type:'process', x:2400, y:330, w:200, text:'Produto Uso Contínuo<br>Comprou para 2 meses'},
+ {id:'p3', type:'process', x:2640, y:330, w:200, text:'Produto Uso Contínuo<br>Comprou para 3 meses'},
+
+ {id:'autoP1', type:'auto', x:2160, y:410, w:200, text:'AUTOMAÇÃO DO SISTEMA'},
+ {id:'msgP1a', type:'message', x:2140, y:470, w:240, title:'Confirmação de entrega', trigger:'{3 dias após o envio/entrega}',
+   paras:['Olá, [Nome]! Seu pedido foi enviado há 3 dias. Chegou tudo certinho? Está tudo bem com a embalagem e com os produtos? Se precisar de alguma orientação, estamos à disposição! 💚']},
+ {id:'msgP1b', type:'message', x:2140, y:660, w:240, title:'Lembrete de recompra', trigger:'{20 dias após a compra – 10 dias antes do fim do tratamento}',
+   paras:['Olá, [Nome]! Notamos que o seu produto está quase acabando! Para não interromper o seu tratamento, que tal já deixarmos tudo pronto para você? 💚 Assim, evitamos interrupções e garantimos seu bem-estar!']},
+ {id:'msgP1c', type:'message', x:2140, y:870, w:240, title:'Reforço de continuidade', trigger:'{25 dias após a compra – 5 dias antes do fim do tratamento}',
+   paras:['Olá, [Nome]! Só passando para lembrar que faltam apenas 5 dias para acabar o seu produto. Podemos garantir a continuidade do seu tratamento? Estamos prontos para separar e enviar com prioridade para você! 😍']},
+
+ {id:'autoP2', type:'auto', x:2400, y:410, w:200, text:'AUTOMAÇÃO DO SISTEMA'},
+ {id:'msgP2a', type:'message', x:2380, y:470, w:240, title:'Confirmação de entrega', trigger:'{3 dias após o envio/entrega}',
+   paras:['Olá, [Nome]! Seu pedido foi enviado há 3 dias. Chegou tudo certinho? Está tudo bem com a embalagem e com os produtos? Se precisar de alguma orientação, estamos à disposição! 💚']},
+ {id:'msgP2b', type:'message', x:2380, y:660, w:240, title:'Acompanhamento de experiência', trigger:'{30 dias após a compra}',
+   paras:['[Nome], tudo bem com você? Como está sendo a experiência com o seu produto? Está tudo certo? Precisa de alguma orientação? Estamos aqui para acompanhar cada etapa do seu tratamento! 💚']},
+ {id:'msgP2c', type:'message', x:2380, y:870, w:240, title:'Lembrete de recompra', trigger:'{50 dias após a compra – 10 dias antes do fim do tratamento}',
+   paras:['Olá, [Nome]! Esperamos que você esteja bem. Notamos que o seu produto está quase acabando. Que tal já deixarmos tudo pronto para você? 💚 Assim evitamos interrupções e garantimos seu bem-estar!']},
+ {id:'msgP2d', type:'message', x:2380, y:1080, w:240, title:'Reforço de continuidade', trigger:'{55 dias após a compra – 5 dias antes do fim do tratamento}',
+   paras:['Olá, [Nome]! Só passando para lembrar que faltam apenas 5 dias para acabar o seu produto. Podemos garantir a continuidade do seu tratamento? Estamos prontos para separar e enviar com prioridade para você! 😍💚']},
+
+ {id:'autoP3', type:'auto', x:2640, y:410, w:200, text:'AUTOMAÇÃO DO SISTEMA'},
+ {id:'msgP3a', type:'message', x:2620, y:470, w:240, title:'Confirmação de entrega', trigger:'{3 dias após o envio/entrega}',
+   paras:['Olá, [Nome]! Seu pedido foi enviado há 3 dias. Chegou tudo certinho? Está tudo bem com a embalagem e com os produtos? Se precisar de alguma orientação, estamos à disposição! 💚']},
+ {id:'msgP3b', type:'message', x:2620, y:660, w:240, title:'Acompanhamento de experiência', trigger:'{45 dias após a compra}',
+   paras:['Olá, [Nome]! Como está a sua experiência? Já se passaram 45 dias desde que iniciamos o uso do seu produto. Queremos saber como você está se sentindo! Tudo certo de acordo com a orientação? 💚']},
+ {id:'msgP3c', type:'message', x:2620, y:870, w:240, title:'Lembrete de recompra', trigger:'{75 dias após a compra – 15 dias antes do fim do tratamento}',
+   paras:['Olá, [Nome]! Notamos que o seu produto está quase acabando. Para não interromper o seu tratamento, que tal já deixarmos tudo pronto para você? 💚']},
+ {id:'msgP3d', type:'message', x:2620, y:1080, w:240, title:'Reforço de continuidade', trigger:'{85 dias após a compra – 5 dias antes do fim do tratamento}',
+   paras:['Olá, [Nome]! Só passando para lembrar que faltam apenas 5 dias para acabar o seu produto. Podemos garantir a continuidade do seu tratamento? Estamos prontos para separar e enviar com prioridade! 😍💚']}
+];
+
+const EDGES = [
+ ['att','duvidas','left','right'],['att','sol','right','left'],['sol','cad','right','left'],['cad','funilV','right','left'],
+ ['funilV','orcEnv','bottom','top'],['orcEnv','neg','bottom','top'],['orcEnv','apr','bottom','top'],
+ ['neg','autoNeg','bottom','top'],['autoNeg','msgNeg1','bottom','top'],['msgNeg1','negNR1','bottom','top'],
+ ['negNR1','msgNeg2','bottom','top'],['msgNeg2','negNR2','bottom','top'],['negNR2','pesquisa','bottom','top'],
+ ['pesquisa','perda48','right','left'],
+ ['apr','ganho','bottom','top'],['apr','manip','right','left'],['manip','enviado','right','left'],['enviado','dup','right','left'],
+ ['nota','dup','bottom','top'],['dup','p1','right','left'],['p1','p2','right','left'],['p2','p3','right','left'],
+ ['p1','autoP1','bottom','top'],['autoP1','msgP1a','bottom','top'],['msgP1a','msgP1b','bottom','top'],['msgP1b','msgP1c','bottom','top'],
+ ['p2','autoP2','bottom','top'],['autoP2','msgP2a','bottom','top'],['msgP2a','msgP2b','bottom','top'],['msgP2b','msgP2c','bottom','top'],['msgP2c','msgP2d','bottom','top'],
+ ['p3','autoP3','bottom','top'],['autoP3','msgP3a','bottom','top'],['msgP3a','msgP3b','bottom','top'],['msgP3b','msgP3c','bottom','top'],['msgP3c','msgP3d','bottom','top']
+];
+
+const TYPE_BADGE = {
+ start:['Regra de atendimento','#e8f0ff','#0b6cf4'],
+ process:['Etapa do processo','#e8f7f0','#0f8a5f'],
+ funnel:['Funil','#e8f7f0','#0e8a60'],
+ auto:['Automação do sistema','#eef2ff','#4338ca'],
+ message:['Mensagem automática (editável)','#e8f7ee','#199f68'],
+ note:['Nota de configuração','#f1f5f9','#64748b'],
+ 'annot upper':['Ação / observação','#fdeeee','#b42323'],
+ annot:['Ação / observação','#fdeeee','#b42323']
+};
+
+/* ================= PERSISTÊNCIA ================= */
+const byId = {};
+NODES.forEach(n=> byId[n.id]=n);
+let edits = {};
+try{ edits = Object.assign({}, JSON.parse(document.getElementById('saved-edits').textContent||'{}'), JSON.parse(localStorage.getItem(KEY)||'{}') ); }catch(e){ edits = {}; }
+if(edits.__pos){ NODES.forEach(n=>{ const p=edits.__pos[n.id]; if(p){ n.x=p.x; n.y=p.y; } }); }
+Object.keys(edits).forEach(id=>{ if(id!=='__pos' && byId[id]) Object.assign(byId[id], edits[id]); });
+function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(edits)); }catch(e){} }
+function collectPositions(){ const p={}; NODES.forEach(n=> p[n.id]={x:Math.round(n.x), y:Math.round(n.y)}); return p; }
+
+/* ================= RENDER ================= */
+const viewport=document.getElementById('viewport'), world=document.getElementById('world'), svg=document.getElementById('edges');
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function cardHTML(n){
+  if(n.type==='message') return '<strong>'+esc(n.title)+'</strong><em>'+esc(n.trigger)+'</em>'+n.paras.map(p=>'<p>'+esc(p)+'</p>').join('')+'<span class="read">↳ Clique para ler tudo / editar</span>';
+  if(n.type==='note') return '<p>'+n.text+'</p><span class="read">↳ Clique para ler tudo / editar</span>';
+  return n.text;
+}
+NODES.forEach(n=>{
+  const el=document.createElement('div');
+  el.className='node '+n.type; el.dataset.id=n.id;
+  el.style.left=n.x+'px'; el.style.top=n.y+'px'; el.style.width=n.w+'px';
+  el.innerHTML=cardHTML(n);
+  world.appendChild(el); n.el=el;
+});
+const edgeEls=EDGES.map(e=>{
+  const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('marker-end','url(#arrow)'); svg.appendChild(p);
+  return {from:e[0],to:e[1],fs:e[2],ts:e[3],el:p};
+});
+function rect(id){ const n=byId[id]; return {x:n.x,y:n.y,w:n.el.offsetWidth,h:n.el.offsetHeight}; }
+function anchor(r,s){ if(s==='bottom')return{x:r.x+r.w/2,y:r.y+r.h}; if(s==='top')return{x:r.x+r.w/2,y:r.y}; if(s==='right')return{x:r.x+r.w,y:r.y+r.h/2}; return{x:r.x,y:r.y+r.h/2}; }
+function ctrl(p,s,d){ if(s==='bottom')return[p.x,p.y+d]; if(s==='top')return[p.x,p.y-d]; if(s==='right')return[p.x+d,p.y]; return[p.x-d,p.y]; }
+function updateEdges(){
+  edgeEls.forEach(e=>{
+    const a=anchor(rect(e.from),e.fs), b=anchor(rect(e.to),e.ts);
+    const d=Math.max(30,Math.min(140,Math.hypot(b.x-a.x,b.y-a.y)*0.35));
+    const c1=ctrl(a,e.fs,d), c2=ctrl(b,e.ts,d);
+    e.el.setAttribute('d','M'+a.x+','+a.y+' C'+c1[0]+','+c1[1]+' '+c2[0]+','+c2[1]+' '+b.x+','+b.y);
+  });
+}
+
+/* ================= PAN / ZOOM / DRAG ================= */
+let pan={x:0,y:0}, zoom=1;
+const label=document.getElementById('zoomLabel');
+function apply(){ world.style.transform='translate('+pan.x+'px,'+pan.y+'px) scale('+zoom+')'; label.textContent=Math.round(zoom*100)+'%'; }
+const clampZ=z=>Math.max(0.25,Math.min(2.5,z));
+function zoomAt(px,py,f){ const r=viewport.getBoundingClientRect(),mx=px-r.left,my=py-r.top,nz=clampZ(zoom*f);
+  pan.x=mx-(mx-pan.x)*(nz/zoom); pan.y=my-(my-pan.y)*(nz/zoom); zoom=nz; apply(); }
+function fit(){
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  NODES.forEach(n=>{ const r=rect(n.id); minX=Math.min(minX,r.x); minY=Math.min(minY,r.y); maxX=Math.max(maxX,r.x+r.w); maxY=Math.max(maxY,r.y+r.h); });
+  const pad=70,bw=maxX-minX+pad*2,bh=maxY-minY+pad*2,vw=viewport.clientWidth,vh=viewport.clientHeight;
+  zoom=clampZ(Math.min(vw/bw,vh/bh,1.15));
+  pan.x=(vw-bw*zoom)/2-(minX-pad)*zoom; pan.y=(vh-bh*zoom)/2-(minY-pad)*zoom; apply();
+}
+document.getElementById('zin').onclick=()=>{const r=viewport.getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,1.2);};
+document.getElementById('zout').onclick=()=>{const r=viewport.getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,1/1.2);};
+document.getElementById('zfit').onclick=fit;
+document.getElementById('btnZen').onclick=()=>{ document.body.classList.toggle('zen'); requestAnimationFrame(fit); };
+viewport.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,e.deltaY<0?1.12:1/1.12);},{passive:false});
+window.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  const r=viewport.getBoundingClientRect();
+  if(e.key==='+'||e.key==='=') zoomAt(r.left+r.width/2,r.top+r.height/2,1.2);
+  if(e.key==='-') zoomAt(r.left+r.width/2,r.top+r.height/2,1/1.2);
+  if(e.key==='0') fit();
+});
+const pointers=new Map(); let drag=null,pinch=null;
+viewport.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.ui-overlay')) return; /* NÃO captura cliques nos controles */
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); viewport.setPointerCapture(e.pointerId);
+  if(pointers.size===2){ drag=null; const p=[...pointers.values()];
+    pinch={d0:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),z0:zoom,p0:{...pan},mid0:{x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2}}; return; }
+  const nodeEl=e.target.closest('.node');
+  if(nodeEl){ const n=byId[nodeEl.dataset.id]; drag={type:'node',n,sx:e.clientX,sy:e.clientY,ox:n.x,oy:n.y,moved:false}; }
+  else{ drag={type:'pan',sx:e.clientX,sy:e.clientY,ox:pan.x,oy:pan.y,moved:false}; viewport.classList.add('panning'); }
+});
+viewport.addEventListener('pointermove',e=>{
+  if(pointers.has(e.pointerId)) pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&pointers.size===2){
+    const p=[...pointers.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),mid={x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2};
+    const r=viewport.getBoundingClientRect(),nz=clampZ(pinch.z0*(d/pinch.d0));
+    const wx=(pinch.mid0.x-r.left-pinch.p0.x)/pinch.z0, wy=(pinch.mid0.y-r.top-pinch.p0.y)/pinch.z0;
+    zoom=nz; pan.x=(mid.x-r.left)-wx*nz; pan.y=(mid.y-r.top)-wy*nz; apply(); return;
+  }
+  if(!drag) return;
+  const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy;
+  if(Math.abs(dx)>3||Math.abs(dy)>3) drag.moved=true;
+  if(drag.type==='node'){ drag.n.x=drag.ox+dx/zoom; drag.n.y=drag.oy+dy/zoom;
+    drag.n.el.style.left=drag.n.x+'px'; drag.n.el.style.top=drag.n.y+'px'; updateEdges(); }
+  else{ pan.x=drag.ox+dx; pan.y=drag.oy+dy; apply(); }
+});
+function endPointer(e){
+  pointers.delete(e.pointerId); if(pointers.size<2) pinch=null;
+  viewport.classList.remove('panning');
+  if(drag&&!drag.moved){ if(drag.type==='node') select(drag.n.id); else deselect(); }
+  if(drag&&drag.type==='node'&&drag.moved){ edits.__pos=collectPositions(); persist(); }
+  drag=null;
+}
+viewport.addEventListener('pointerup',endPointer);
+viewport.addEventListener('pointercancel',endPointer);
+viewport.addEventListener('dblclick',e=>{
+  const nodeEl=e.target.closest('.node'); if(!nodeEl) return;
+  const r=rect(nodeEl.dataset.id), vr=viewport.getBoundingClientRect();
+  pan.x=vr.width/2-(r.x+r.w/2)*zoom; pan.y=vr.height/2-(r.y+r.h/2)*zoom; apply();
+});
+
+/* ================= DETALHES + EDIÇÃO ================= */
+const details=document.getElementById('details'), dbody=document.getElementById('dbody');
+let selected=null;
+function deselect(){
+  if(selected){ selected.el.classList.remove('selected'); selected=null; }
+  edgeEls.forEach(ed=>{ ed.el.classList.remove('hl'); ed.el.setAttribute('marker-end','url(#arrow)'); });
+  details.classList.remove('open');
+}
+function select(id){
+  deselect();
+  const n=byId[id]; selected=n; n.el.classList.add('selected');
+  edgeEls.forEach(ed=>{ if(ed.from===id||ed.to===id){ ed.el.classList.add('hl'); ed.el.setAttribute('marker-end','url(#arrowHl)'); } });
+  const badge=TYPE_BADGE[n.type]||TYPE_BADGE.process;
+  let html='<span class="dbadge" style="background:'+badge[1]+';color:'+badge[2]+'">'+badge[0]+'</span>';
+  if(n.type==='message'){
+    html+='<h3>'+esc(n.title)+'</h3><div class="trig">'+esc(n.trigger)+'</div>';
+    n.paras.forEach(p=> html+='<p>'+esc(p)+'</p>');
+    html+='<button class="hbtn green" id="editBtn">✏️ Editar mensagem</button>';
+  } else if(n.type==='note'){
+    html+='<h3>Nota de configuração</h3><p>'+esc(n.full||n.text)+'</p><button class="hbtn green" id="editBtn">✏️ Editar nota</button>';
+  } else {
+    html+='<h3>'+esc((n.title||n.text).replace(/<br>/g,' — '))+'</h3><p>'+esc(n.text.replace(/<br>/g,'\n'))+'</p>';
+  }
+  dbody.innerHTML=html;
+  const eb=document.getElementById('editBtn');
+  if(eb) eb.onclick=()=>openEditor(n);
+  details.classList.add('open');
+}
+function openEditor(n){
+  const isMsg=n.type==='message';
+  dbody.innerHTML =
+    '<span class="dbadge" style="background:#e8f7ee;color:#199f68">Modo edição</span>'+
+    (isMsg? '<div class="field"><label>Título</label><input id="edTitle" value="'+esc(n.title)+'"></div>'+
+            '<div class="field"><label>Gatilho / tempo</label><input id="edTrigger" value="'+esc(n.trigger)+'"></div>':'')+
+    '<div class="field"><label>'+(isMsg?'Mensagem (parágrafos separados por linha em branco)':'Texto da nota')+'</label>'+
+    '<textarea id="edText">'+esc(isMsg? n.paras.join('\n\n') : (n.full||n.text))+'</textarea></div>'+
+    '<div class="edit-actions"><button class="hbtn primary" id="edSave">💾 Salvar</button><button class="hbtn" id="edCancel">Cancelar</button></div>'+
+    '<p class="hint">A edição fica salva neste navegador. Use <b>💾 Salvar HTML</b> para baixar o arquivo com tudo embutido ou <b>☁️ Publicar no GitHub</b> para atualizar a versão online.</p>';
+  document.getElementById('edCancel').onclick=()=>select(n.id);
+  document.getElementById('edSave').onclick=()=>{
+    if(isMsg){
+      n.title=document.getElementById('edTitle').value.trim()||n.title;
+      n.trigger=document.getElementById('edTrigger').value.trim()||n.trigger;
+      n.paras=document.getElementById('edText').value.split(/\n{2,}/).map(s=>s.trim()).filter(Boolean);
+      if(!n.paras.length) n.paras=[' '];
+      edits[n.id]={title:n.title,trigger:n.trigger,paras:n.paras};
+    } else {
+      const v=document.getElementById('edText').value;
+      n.full=v; n.text=v.replace(/\n/g,'<br>');
+      edits[n.id]={full:n.full,text:n.text};
+    }
+    edits.__pos=collectPositions(); persist();
+    n.el.innerHTML=cardHTML(n); updateEdges(); select(n.id);
+    toast('Editado e salvo neste navegador ✔');
+  };
+}
+document.getElementById('dclose').onclick=deselect;
+
+/* ================= SALVAR / PUBLICAR / PDF / RESET ================= */
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),3200); }
+function bakedHTML(){
+  edits.__pos=collectPositions(); persist();
+  const json=JSON.stringify(edits);
+  return PRISTINE.replace(/(<script type="application\/json" id="saved-edits">)[\s\S]*?(<\/script>)/, (m,a,b)=>a+json+b);
+}
+document.getElementById('btnSaveHtml').onclick=()=>{
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([bakedHTML()],{type:'text/html'}));
+  a.download='fluxo-crm-ultra-popular-goias.html';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('HTML baixado com mensagens e posições embutidas 💾');
+};
+function b64(s){ return btoa(unescape(encodeURIComponent(s))); }
+document.getElementById('btnCloud').onclick=async()=>{
+  if(!GITHUB_CONFIG.repo||!GITHUB_CONFIG.token){
+    toast('Salvamento online: preencha GITHUB_CONFIG no início do código (repo + token). Sem isso, use 💾 Salvar HTML.');
+    return;
+  }
+  toast('Publicando no GitHub… ☁️');
+  try{
+    const url='https://api.github.com/repos/'+GITHUB_CONFIG.repo+'/contents/'+GITHUB_CONFIG.path;
+    const getRes=await fetch(url+'?ref='+GITHUB_CONFIG.branch,{headers:{Authorization:'token '+GITHUB_CONFIG.token}});
+    let sha; if(getRes.ok){ sha=(await getRes.json()).sha; }
+    const body={message:'Fluxo atualizado (mensagens e posições)', content:b64(bakedHTML()), branch:GITHUB_CONFIG.branch};
+    if(sha) body.sha=sha;
+    const putRes=await fetch(url,{method:'PUT',headers:{Authorization:'token '+GITHUB_CONFIG.token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!putRes.ok){ const err=await putRes.json().catch(()=>({})); throw new Error(err.message||('HTTP '+putRes.status)); }
+    toast('Fluxo publicado no GitHub! Quem acessar o site verá a versão atual. ☁️✔');
+  }catch(err){ toast('Erro ao publicar: '+err.message); }
+};
+document.getElementById('btnPdf').onclick=()=>{
+  toast('Na janela de impressão, escolha "Salvar como PDF" 📄');
+  setTimeout(()=>window.print(),500);
+};
+document.getElementById('btnReset').onclick=()=>{
+  if(confirm('Restaurar as mensagens e posições originais? As edições salvas NESTE navegador serão descartadas.')){
+    localStorage.removeItem(KEY); location.reload();
+  }
+};
+
+/* ================= INIT ================= */
+updateEdges();
+requestAnimationFrame(()=>{ updateEdges(); fit(); });
+window.addEventListener('resize',()=>apply());
+</script>
+</body>
+</html>
